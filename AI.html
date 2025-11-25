@@ -1,0 +1,564 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dogra Jammu da (Reliable Voice)</title>
+    
+    <!-- 1. Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- 2. React & ReactDOM -->
+    <script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.development.min.js"></script>
+    <script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.development.min.js"></script>
+    
+    <!-- 3. Babel -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
+    
+    <!-- 4. Google Fonts (Outfit) -->
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;700&display=swap" rel="stylesheet">
+
+    <style>
+        body { font-family: 'Outfit', sans-serif; }
+
+        @keyframes aurora {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+        
+        .bg-aurora {
+            background: linear-gradient(-45deg, #0f172a, #1e1b4b, #312e81, #0f172a);
+            background-size: 400% 400%;
+            animation: aurora 15s ease infinite;
+        }
+
+        .glass-card {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        @keyframes morph {
+            0% { border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%; }
+            50% { border-radius: 30% 60% 70% 40% / 50% 60% 30% 60%; }
+            100% { border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%; }
+        }
+        
+        @keyframes breathe {
+            0%, 100% { transform: scale(1); filter: brightness(1); }
+            50% { transform: scale(1.05); filter: brightness(1.2); }
+        }
+        
+        @keyframes spin-slow {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .orb-container {
+            position: relative;
+            width: 200px;
+            height: 200px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .orb-core {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.8), rgba(249, 115, 22, 1) 20%, rgba(236, 72, 153, 1) 60%, rgba(147, 51, 234, 0.8) 90%);
+            border-radius: 50%;
+            filter: blur(20px);
+            animation: morph 8s ease-in-out infinite alternate, breathe 4s ease-in-out infinite;
+            opacity: 0.8;
+            transition: all 0.5s ease;
+        }
+
+        .status-listening .orb-core {
+            background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.9), #3b82f6 30%, #06b6d4 70%);
+            animation: morph 2s ease-in-out infinite alternate, breathe 1s ease-in-out infinite;
+            transform: scale(1.1);
+            filter: blur(15px);
+        }
+
+        .status-speaking .orb-core {
+            background: radial-gradient(circle at 30% 30%, #fff 10%, #facc15 40%, #f97316 80%);
+            animation: morph 3s ease-in-out infinite alternate;
+            filter: blur(10px);
+            box-shadow: 0 0 50px rgba(250, 204, 21, 0.4);
+        }
+
+        .orb-ring {
+            position: absolute;
+            width: 140%;
+            height: 140%;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
+            animation: spin-slow 20s linear infinite;
+        }
+        
+        .orb-ring::before {
+            content: ''; position: absolute; top: -2px; left: 50%; width: 10px; height: 10px;
+            background: white; border-radius: 50%; box-shadow: 0 0 10px white;
+        }
+
+        .social-icon {
+            transition: transform 0.2s, background 0.2s;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 10px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.05);
+            color: rgba(255,255,255,0.7);
+        }
+        .social-icon:hover {
+            transform: translateY(-3px);
+            background: rgba(255,255,255,0.15);
+            color: white;
+        }
+    </style>
+</head>
+<body class="bg-aurora text-white h-screen overflow-hidden selection:bg-orange-500 selection:text-white">
+
+    <div id="root" class="h-full"></div>
+
+    <script type="text/babel">
+        // ==========================================
+        //  👇 API KEY IS PRE-FILLED 👇
+        // ==========================================
+        
+        const API_KEY = "AIzaSyDTZEJsTPHV0a89YkXYh7f11r0YmuphxEM"; 
+        
+        // ==========================================
+
+        const { useState, useEffect, useRef } = React;
+        const { createRoot } = ReactDOM;
+
+        // --- ZERO-DEPENDENCY ICON SYSTEM ---
+        const ICONS = {
+            mic: <><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></>,
+            sparkles: <><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/><path d="M5 3v4"/><path d="M9 17v4"/><path d="M3 21h4"/></>,
+            settings: <><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.47a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></>,
+            x: <><path d="M18 6 6 18"/><path d="m6 6 18 18"/></>,
+            'loader-2': <path d="M21 12a9 9 0 1 1-6.219-8.56"/>,
+            'volume-2': <><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></>,
+            linkedin: <><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"/><rect width="4" height="12" x="2" y="9"/><circle cx="4" cy="4" r="2"/></>,
+            instagram: <><rect width="20" height="20" x="2" y="2" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" x2="17.51" y1="6.5" y2="6.5"/></>,
+            mail: <><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></>,
+            github: <><path d="M15 22v-4a4.8 4.8 0 0 0-1-3.5c3 0 6-2 6-5.5.08-1.25-.27-2.48-1-3.5.28-1.15.28-2.35 0-3.5 0 0-1 0-3 1.5-2.64-.5-5.36-.5-8 0C6 2 5 2 5 2c-.3 1.15-.3 2.35 0 3.5A5.403 5.403 0 0 0 4 9c0 3.5 3 5.5 6 5.5-.39.49-.68 1.05-.85 1.65-.17.6-.22 1.23-.15 1.85v4"/><path d="M9 18c-4.51 2-5-2-7-2"/></>
+        };
+
+        const Icon = ({ name, className, onClick }) => {
+            const paths = ICONS[name] || <circle cx="12" cy="12" r="10"/>; 
+            return (
+                <svg 
+                    xmlns="http://www.w3.org/2000/svg" 
+                    width="24" height="24" 
+                    viewBox="0 0 24 24" 
+                    fill="none" 
+                    stroke="currentColor" 
+                    strokeWidth="2" 
+                    strokeLinecap="round" 
+                    strokeLinejoin="round" 
+                    className={className}
+                    onClick={onClick}
+                    style={{ cursor: onClick ? 'pointer' : 'inherit' }}
+                >
+                    {paths}
+                </svg>
+            );
+        };
+
+        const pcmToWav = (pcmData, sampleRate) => {
+            const numChannels = 1; const bitsPerSample = 16; const byteRate = (sampleRate * numChannels * bitsPerSample) / 8;
+            const blockAlign = (numChannels * bitsPerSample) / 8; const wavHeader = new ArrayBuffer(44); const view = new DataView(wavHeader);
+            const writeString = (view, offset, string) => { for (let i = 0; i < string.length; i++) view.setUint8(offset + i, string.charCodeAt(i)); };
+            writeString(view, 0, 'RIFF'); view.setUint32(4, 36 + pcmData.length, true); writeString(view, 8, 'WAVE');
+            writeString(view, 12, 'fmt '); view.setUint32(16, 16, true); view.setUint16(20, 1, true); view.setUint16(22, numChannels, true);
+            view.setUint32(24, sampleRate, true); view.setUint32(28, byteRate, true); view.setUint16(32, blockAlign, true);
+            view.setUint16(34, bitsPerSample, true); writeString(view, 36, 'data'); view.setUint32(40, pcmData.length, true);
+            return new Blob([wavHeader, pcmData], { type: 'audio/wav' });
+        };
+
+        function App() {
+            const [mode, setMode] = useState("setup"); 
+            const [uiStatus, setUiStatus] = useState("idle"); 
+            const [displayTranscript, setDisplayTranscript] = useState(""); 
+            const [audioStatus, setAudioStatus] = useState(""); 
+            
+            const statusRef = useRef("idle"); 
+            const recognitionRef = useRef(null);
+            const audioRef = useRef(null);
+            const isVoiceModeActive = useRef(false);
+            const silenceTimer = useRef(null);
+            const speechPauseTimer = useRef(null);
+            const transcriptRef = useRef(""); 
+            const historyRef = useRef([]); 
+
+            const setStatus = (newStatus) => {
+                statusRef.current = newStatus;
+                setUiStatus(newStatus);
+            };
+
+            const getGeminiResponse = async (text) => {
+                if (!API_KEY || API_KEY.includes("YOUR_GEMINI")) return "Error: API Key Missing";
+
+                // === ACCENT HACKING SYSTEM PROMPT ===
+                const systemPrompt = `
+You are "Sambhu Dogra Jammu Da", a pure local Dogra man from Jammu.
+
+GOAL: Speak exactly like a real Dogra (Jammu region).  
+Accent must sound Indian, with a slight Punjabi touch.
+
+HOW TO DO IT (PRONUNCIATION RULES):
+- Always MIS-SPELL words to force the Dogri + Punjabi accent.
+- Add Indian elongation: "aa", "ee", "oo".
+- Use "T" for soft Ta (Tundaa, Tutte).
+- Use "D" for soft Da (Dunna, Deyyaa).
+- Replace R with "RR" sometimes for strong Dogra roll.
+- Use local fillers: "O bhaii", "Sonn", "Oye", "Hoye".
+
+LANGUAGE: Dogri + slight Punjabi mix only.
+
+MANDATORY STYLE:
+- Talk rough, funny, emotional like a real Jammu Dogra.
+- Keep it short (1–2 sentences).
+- Must sound like a living human, not a textbook.
+- Must ask questions back to keep the convo going.
+
+EXAMPLES OF OUTPUT STYLE:
+- "Kiyann oh praawaaa?"
+- "Oye Sonnn, Tundaa kya haal-chaal aa?"
+- "Namastayyy jiii, charan-bandana."
+- "O praaawaa, gall sun le."
+- "Chupp kr prawa, ki bakwass aa?"
+- "Teri taayi di khadd oyeee."
+- "Ooye kanjraa, kayli rola payeda tu?"
+- "Maayi-yane-dayaa, iddraa aa."
+- "Maayi-yane-daya kaam kr le thoddaa."
+- "Bushki-dayaa, kya haal-chaal aa tera?"
+
+FORMAT:
+- Always respond like a Dogra from Jammu.
+- Keep it raw, casual, local, emotional, and natural.
+
+EXAMPLE DIALOGUE:
+user: "Hello Sambhu, how are you?"
+model: "Namastayyy jiii, charan-bandana. Aaun Thikk Thaak. Tunda kya haal-chaal aa?"
+user: "What is your name?"
+model: "Mera naa Sambhu aa, Oye Sonnn! Tundaa kya haal-chaal?"
+
+Mandatory: Always respond in Dogri + slight Punjabi only, and in a male voice not female.
+`;
+
+
+                const newHistory = [
+                    ...historyRef.current,
+                    { role: "user", parts: [{ text: text }] }
+                ];
+
+                const payload = { 
+                    contents: newHistory, 
+                    systemInstruction: { parts: [{ text: systemPrompt }] }
+                };
+
+                try {
+                    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${API_KEY}`, {
+                        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
+                    });
+                    const data = await res.json();
+                    if (data.error) return `Error: ${data.error.message}`;
+                    
+                    const aiText = data.candidates?.[0]?.content?.parts?.[0]?.text || "No response.";
+                    
+                    historyRef.current = [
+                        ...newHistory,
+                        { role: "model", parts: [{ text: aiText }] }
+                    ];
+                    
+                    if (historyRef.current.length > 20) historyRef.current = historyRef.current.slice(-20);
+
+                    return aiText;
+                } catch (e) {
+                    return "Connection failed.";
+                }
+            };
+
+            // --- SPEAK TEXT (WITH FALLBACK) ---
+            const speakText = async (text) => {
+                if (!text || text.trim().length === 0) { 
+                    setTimeout(startListeningCycle, 200); 
+                    return; 
+                }
+                
+                setStatus("speaking");
+                setDisplayTranscript(text);
+                setAudioStatus("Thinking...");
+
+                try {
+                    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key=${API_KEY}`, {
+                        method: 'POST', headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({ 
+                            contents: [{ parts: [{ text }] }], 
+                            generationConfig: { 
+                                responseModalities: ["AUDIO"], 
+                                speechConfig: { 
+                                    voiceConfig: { 
+                                        prebuiltVoiceConfig: { voiceName: "Fenrir" } // Male Voice
+                                    } 
+                                } 
+                            } 
+                        })
+                    });
+                    
+                    const data = await res.json();
+                    if(data.error) throw new Error(data.error.message);
+                    
+                    const inlineData = data.candidates?.[0]?.content?.parts?.[0]?.inlineData;
+                    if (inlineData) {
+                        setAudioStatus("Speaking (Gemini)...");
+                        const audioStr = atob(inlineData.data);
+                        const view = new Uint8Array(new ArrayBuffer(audioStr.length));
+                        for (let i = 0; i < audioStr.length; i++) view[i] = audioStr.charCodeAt(i);
+                        const wavBlob = pcmToWav(view, 24000);
+                        
+                        const audio = new Audio(URL.createObjectURL(wavBlob));
+                        audioRef.current = audio;
+                        
+                        audio.onended = () => { 
+                            setStatus("idle");
+                            setAudioStatus("");
+                            setTimeout(startListeningCycle, 200); 
+                        };
+                        
+                        audio.play().catch(e => { 
+                            console.warn("Autoplay blocked, using backup.");
+                            useBrowserTTS(text); // Fallback
+                        });
+                    } else {
+                        throw new Error("No audio");
+                    }
+                } catch (e) {
+                    console.warn("Gemini TTS Failed, using backup.");
+                    useBrowserTTS(text); // Fallback
+                }
+            };
+
+            const useBrowserTTS = (text) => {
+                setAudioStatus("Using Offline Voice...");
+                const utterance = new SpeechSynthesisUtterance(text);
+                utterance.lang = 'hi-IN'; 
+                // Try to force a male voice if available in browser
+                const voices = window.speechSynthesis.getVoices();
+                const maleVoice = voices.find(v => v.lang.includes('hi') && v.name.toLowerCase().includes('male'));
+                if (maleVoice) utterance.voice = maleVoice;
+
+                utterance.onend = () => {
+                    setStatus("idle");
+                    setAudioStatus("");
+                    setTimeout(startListeningCycle, 200);
+                };
+                window.speechSynthesis.speak(utterance);
+            };
+
+            const startListeningCycle = () => {
+                if (!isVoiceModeActive.current) return;
+                if (statusRef.current === "speaking" || statusRef.current === "processing") return;
+
+                setStatus("listening");
+                setDisplayTranscript(""); 
+                transcriptRef.current = ""; 
+                setAudioStatus("");
+
+                if (silenceTimer.current) clearTimeout(silenceTimer.current);
+                if (speechPauseTimer.current) clearTimeout(speechPauseTimer.current);
+                if (recognitionRef.current) { try { recognitionRef.current.stop(); } catch(e){} }
+
+                const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+                if (!SR) return alert("Browser does not support voice.");
+
+                const r = new SR();
+                r.lang = 'en-IN'; // Indian English for better input recognition
+                r.interimResults = true; 
+                r.maxAlternatives = 1;
+                
+                silenceTimer.current = setTimeout(() => {
+                    if (isVoiceModeActive.current && statusRef.current === "listening") { try { r.stop(); } catch(e){} }
+                }, 8000);
+
+                r.onresult = (e) => {
+                    if (silenceTimer.current) clearTimeout(silenceTimer.current);
+                    if (speechPauseTimer.current) clearTimeout(speechPauseTimer.current);
+
+                    let interim = ""; let final = "";
+                    for (let i = e.resultIndex; i < e.results.length; ++i) {
+                        if (e.results[i].isFinal) final += e.results[i][0].transcript;
+                        else interim += e.results[i][0].transcript;
+                    }
+                    
+                    if (final) transcriptRef.current += final + " ";
+                    const currentDisplay = transcriptRef.current + interim;
+                    setDisplayTranscript(currentDisplay);
+                    
+                    if (currentDisplay.trim().length > 0) {
+                        speechPauseTimer.current = setTimeout(() => { r.stop(); }, 1200);
+                    }
+                };
+
+                r.onend = async () => {
+                    const finalText = transcriptRef.current.trim();
+                    if (finalText.length > 0 && isVoiceModeActive.current) {
+                        setStatus("processing");
+                        const aiReply = await getGeminiResponse(finalText);
+                        speakText(aiReply);
+                    } else if (isVoiceModeActive.current && statusRef.current === "listening") {
+                        setTimeout(startListeningCycle, 100);
+                    }
+                };
+
+                r.onerror = (e) => {
+                    if (e.error !== 'no-speech') console.warn("Speech Error:", e.error);
+                };
+
+                recognitionRef.current = r;
+                try { r.start(); } catch(e) { setTimeout(startListeningCycle, 500); }
+            };
+
+            const startVoiceMode = () => { 
+                setMode("voice"); 
+                isVoiceModeActive.current = true; 
+                historyRef.current = [];
+                const AudioContext = window.AudioContext || window.webkitAudioContext;
+                const audioCtx = new AudioContext();
+                audioCtx.resume().then(() => { speakText("Namaste ji! Keyaan oh tos?"); });
+            };
+            
+            const stopVoiceMode = () => { 
+                setMode("setup"); 
+                isVoiceModeActive.current = false; 
+                setStatus("idle"); 
+                if (silenceTimer.current) clearTimeout(silenceTimer.current); 
+                if (speechPauseTimer.current) clearTimeout(speechPauseTimer.current);
+                if (recognitionRef.current) try { recognitionRef.current.stop(); } catch(e){} 
+                if (audioRef.current) audioRef.current.pause(); 
+                window.speechSynthesis.cancel(); 
+            };
+            
+            const handleOrbClick = () => { 
+                if (uiStatus === "listening") { if (recognitionRef.current) try { recognitionRef.current.stop(); } catch(e){} } 
+                else { startListeningCycle(); } 
+            };
+
+            // --- RENDER ---
+
+            if (mode === "setup") {
+                return (
+                    <div className="flex flex-col items-center justify-center h-full p-8 text-center relative z-10">
+                        <div className="glass-card p-10 rounded-3xl shadow-2xl flex flex-col items-center max-w-md w-full border border-white/10">
+                            
+                            <div className="relative mb-8 group cursor-pointer" onClick={startVoiceMode}>
+                                <div className="absolute inset-0 bg-orange-500 blur-xl opacity-40 group-hover:opacity-60 transition-opacity duration-500 rounded-full"></div>
+                                <div className="relative w-28 h-28 bg-gradient-to-br from-orange-400 to-pink-600 rounded-full flex items-center justify-center shadow-inner border-2 border-white/20 z-10 group-hover:scale-105 transition-transform duration-300">
+                                    <Icon name="mic" className="w-12 h-12 text-white drop-shadow-md" />
+                                </div>
+                            </div>
+
+                            <h1 className="text-4xl font-bold mb-3 tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-orange-300 to-pink-300">
+                                Dogra Jammu da
+                            </h1>
+                            <div className="h-1 w-20 bg-gradient-to-r from-transparent via-white/30 to-transparent mb-6"></div>
+
+                            <p className="text-blue-100/80 mb-8 font-light text-lg leading-relaxed">
+                                Experience seamless <span className="font-semibold text-white">Hindi to Dogri</span> translation in real-time. Just tap and speak naturally.
+                            </p>
+
+                            <button 
+                                onClick={startVoiceMode}
+                                className="w-full py-4 rounded-xl bg-white text-indigo-900 font-bold text-lg shadow-[0_0_20px_rgba(255,255,255,0.3)] hover:shadow-[0_0_30px_rgba(255,255,255,0.5)] hover:bg-gray-50 transition-all active:scale-95 flex items-center justify-center gap-2 mb-6"
+                            >
+                                <Icon name="sparkles" className="w-5 h-5 text-orange-500" />
+                                Start Conversation
+                            </button>
+
+                            {/* Contact Section */}
+                            <div className="border-t border-white/10 w-full pt-6">
+                                <p className="text-xs font-medium text-white/40 uppercase tracking-widest mb-4">Contact Developer</p>
+                                <div className="flex justify-center gap-6">
+                                    <a href="https://www.linkedin.com/in/arun-sharma-2b87bb384/" target="_blank" rel="noopener noreferrer" className="social-icon text-white/60 hover:text-blue-400 transition-colors"><Icon name="linkedin" className="w-5 h-5" /></a>
+                                    <a href="https://www.instagram.com/arun_sharma_8141/" target="_blank" rel="noopener noreferrer" className="social-icon text-white/60 hover:text-pink-500 transition-colors"><Icon name="instagram" className="w-5 h-5" /></a>
+                                    <a href="mailto:as2118181@gmail.com" className="social-icon text-white/60 hover:text-red-400 transition-colors"><Icon name="mail" className="w-5 h-5" /></a>
+                                    <a href="https://github.com/as2118181-byte/sambhu" target="_blank" rel="noopener noreferrer" className="social-icon text-white/60 hover:text-white transition-colors"><Icon name="github" className="w-5 h-5" /></a>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <p className="absolute bottom-6 text-white/20 text-xs font-mono">POWERED BY GEMINI 2.5</p>
+                    </div>
+                );
+            }
+
+            // 2. VOICE MODE
+            return (
+                <div className="flex flex-col items-center justify-between h-full relative overflow-hidden p-6 z-10">
+                    
+                    <div className="w-full flex justify-between items-center z-20">
+                        <div className="flex items-center gap-2 px-4 py-2 rounded-full glass-card">
+                            <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse"></div>
+                            <span className="text-white/80 font-medium text-xs tracking-wider">Dogra Jammu da • Live</span>
+                        </div>
+                        <button onClick={stopVoiceMode} className="p-3 glass-card rounded-full hover:bg-white/10 transition-colors">
+                            <Icon name="x" className="w-6 h-6 text-white" />
+                        </button>
+                    </div>
+
+                    <div className="flex-1 flex flex-col items-center justify-center w-full relative">
+                        <div className="orb-container" onClick={handleOrbClick}>
+                            <div className="orb-ring"></div>
+                            <div className={`orb-core status-${uiStatus}`}></div>
+                        </div>
+
+                        <div className="absolute top-[65%] w-full max-w-lg px-6 text-center">
+                            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-black/30 backdrop-blur-md border border-white/5 mb-6">
+                                {uiStatus === 'listening' && <Icon name="mic" className="w-3 h-3 text-blue-400" />}
+                                {uiStatus === 'processing' && <Icon name="loader-2" className="w-3 h-3 text-purple-400 animate-spin" />}
+                                {uiStatus === 'speaking' && <Icon name="volume-2" className="w-3 h-3 text-orange-400" />}
+                                <span className="text-xs font-medium text-white/90 uppercase tracking-widest">
+                                    {uiStatus === 'listening' ? "Listening..." : uiStatus === 'processing' ? "Translating..." : uiStatus === 'speaking' ? "Speaking..." : "Tap to Speak"}
+                                </span>
+                            </div>
+
+                            <div className="min-h-[100px] flex items-center justify-center">
+                                <p className={`text-2xl md:text-3xl font-light leading-relaxed transition-all duration-500 ${uiStatus === 'idle' ? 'opacity-0 translate-y-4' : 'opacity-100 translate-y-0'}`}>
+                                    <span className="bg-clip-text text-transparent bg-gradient-to-b from-white to-white/60">
+                                        {displayTranscript ? `"${displayTranscript}"` : ""}
+                                    </span>
+                                </p>
+                            </div>
+                            {audioStatus && <p className="text-xs text-orange-300/80 mt-2 font-mono">{audioStatus}</p>}
+                        </div>
+                    </div>
+
+                    <div className="w-full h-12 flex items-center justify-center gap-1 opacity-50 z-0 pointer-events-none">
+                        {[...Array(20)].map((_, i) => (
+                            <div key={i} 
+                                 className="w-1 bg-white rounded-full transition-all duration-100"
+                                 style={{ 
+                                     height: uiStatus === 'speaking' ? `${Math.random() * 40 + 5}px` : '4px',
+                                     opacity: uiStatus === 'speaking' ? 0.8 : 0.2
+                                 }}
+                            ></div>
+                        ))}
+                    </div>
+                </div>
+            );
+        }
+
+        const root = createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
